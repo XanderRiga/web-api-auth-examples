@@ -12,10 +12,11 @@ var request = require('request'); // "Request" library
 var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
+var _ = require('lodash');
 
-var client_id = 'CLIENT_ID'; // Your client id
-var client_secret = 'CLIENT_SECRET'; // Your secret
-var redirect_uri = 'REDIRECT_URI'; // Your redirect uri
+var client_id = 'ff706cadbcd2445782b2c3719bace226'; // Your client id
+var client_secret = '538dc4b9fd7e4da48df760c4a99f2e1d'; // Your secret
+var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
 
 /**
  * Generates a random string containing numbers and letters
@@ -36,7 +37,9 @@ var stateKey = 'spotify_auth_state';
 
 var app = express();
 
-app.use(express.static(__dirname + '/public'))
+app.set('view engine', 'pug');
+app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname + '../views'))
    .use(cors())
    .use(cookieParser());
 
@@ -46,7 +49,7 @@ app.get('/login', function(req, res) {
   res.cookie(stateKey, state);
 
   // your application requests authorization
-  var scope = 'user-read-private user-read-email';
+  var scope = 'user-read-private user-read-email user-top-read user-read-currently-playing user-read-recently-played';
   res.redirect('https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -140,6 +143,26 @@ app.get('/refresh_token', function(req, res) {
         'access_token': access_token
       });
     }
+  });
+});
+
+app.get('/get_info', function(req, res) {
+  // app.set('view engine', 'pug');
+
+  var access_token = req.query.access_token;
+
+  var options = {
+    url: 'https://api.spotify.com/v1/me/top/artists',
+    headers: { 'Authorization': 'Bearer ' + access_token },
+    json: true
+  };
+
+  request.get(options, function(error, response, body) {
+    var topArtists = _.map(body.items, 'name');
+    console.log(topArtists);
+    return res.render('artists.pug', {
+      topArtists: topArtists
+    });
   });
 });
 
